@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import analyticsConfig from "./data/analytics.json";
 import data from "./data/responses.json";
 import "./styles.css";
 
@@ -19,6 +20,106 @@ const appBasePath = normalizeBasePath(import.meta.env.BASE_URL);
 function appHref(pathSegment = "") {
   const cleanPath = String(pathSegment).replace(/^\/+/, "");
   return `${appBasePath}${cleanPath}`;
+}
+
+const categoryIdSets = new Map(
+  analyticsConfig.categories.map((category) => [
+    category.key,
+    new Set(category.responseIds),
+  ]),
+);
+
+function analyticsText(record) {
+  return [
+    record["Activity Name"],
+    record["Activity Description (Short)"],
+    record["Community Organizations/Partners Involved"],
+    record["Organization Roles"],
+    record["Outputs (E/A)"],
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function recordCategories(record) {
+  return analyticsConfig.categories.filter((category) =>
+    categoryIdSets.get(category.key)?.has(record["Response ID"]),
+  );
+}
+
+function recordMatchesEngagement(record, engagement) {
+  const roles = displayValue(record["Organization Roles"]).toLowerCase();
+  if (engagement.roleLabel && roles.includes(engagement.roleLabel.toLowerCase())) {
+    return true;
+  }
+  return engagement.pattern
+    ? new RegExp(engagement.pattern, "i").test(analyticsText(record))
+    : false;
+}
+
+function recordEngagements(record) {
+  return analyticsConfig.engagementTypes.filter((engagement) =>
+    recordMatchesEngagement(record, engagement),
+  );
+}
+
+function percentage(value, total) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+}
+
+function buildAnalytics(sourceRecords) {
+  const recordsWithMeta = sourceRecords.map((record) => ({
+    record,
+    categories: recordCategories(record),
+    engagements: recordEngagements(record),
+  }));
+
+  const categoryRows = analyticsConfig.categories.map((category) => {
+    const categoryRecords = sourceRecords.filter((record) =>
+      categoryIdSets.get(category.key)?.has(record["Response ID"]),
+    );
+    return {
+      ...category,
+      records: categoryRecords,
+      count: categoryRecords.length,
+      percent: percentage(categoryRecords.length, records.length),
+      engagements: analyticsConfig.engagementTypes.map((engagement) => ({
+        ...engagement,
+        count: categoryRecords.filter((record) =>
+          recordMatchesEngagement(record, engagement),
+        ).length,
+      })),
+    };
+  });
+
+  const taggedIds = new Set(
+    recordsWithMeta
+      .filter((item) => item.categories.length)
+      .map((item) => item.record["Response ID"]),
+  );
+  const multiDomainRecords = recordsWithMeta.filter((item) => item.categories.length > 1);
+  const engagementRows = analyticsConfig.engagementTypes.map((engagement) => {
+    const count = sourceRecords.filter((record) =>
+      recordMatchesEngagement(record, engagement),
+    ).length;
+    return {
+      ...engagement,
+      count,
+      percent: percentage(count, sourceRecords.length),
+    };
+  });
+
+  return {
+    categoryRows,
+    engagementRows,
+    recordsWithMeta,
+    matchedCount: taggedIds.size,
+    outsideCount: records.length - taggedIds.size,
+    multiDomainRecords,
+    maxCategoryCount: Math.max(...categoryRows.map((row) => row.count), 1),
+    maxEngagementCount: Math.max(...engagementRows.map((row) => row.count), 1),
+  };
 }
 
 const templateSections = [
@@ -276,7 +377,227 @@ function TemplateQuestion({ question, record }) {
   );
 }
 
-function TopNav({ currentId }) {
+function CountBar({ value, max }) {
+  const width = max ? `${Math.max(4, Math.round((value / max) * 100))}%` : "0%";
+  return (
+    <div className="count-bar" aria-hidden="true">
+      <span style={{ width }} />
+    </div>
+  );
+}
+
+function StatCard({ label, value, detail }) {
+  return (
+    <article className="stat-card">
+      <p>{label}</p>
+      <strong>{value}</strong>
+      {detail && <span>{detail}</span>}
+    </article>
+  );
+}
+
+function TagList({ items, variant = "domain", emptyLabel = "Outside focus domains" }) {
+  if (!items.length) return <span className="tag muted">{emptyLabel}</span>;
+  return items.map((item) => (
+    <span className={`tag ${variant}`} key={item.key}>
+      {item.label}
+    </span>
+  ));
+}
+
+function AnalyticsPage() {
+  const analytics = useMemo(() => buildAnalytics(records), []);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const selectedCategoryRow = analytics.categoryRows.find(
+    (row) => row.key === selectedCategory,
+  );
+  const scopedRecords = selectedCategoryRow ? selectedCategoryRow.records : records;
+  const scopedRecordIds = new Set(scopedRecords.map((record) => record["Response ID"]));
+  const scopedMeta = analytics.recordsWithMeta.filter((item) =>
+    scopedRecordIds.has(item.record["Response ID"]),
+  );
+  const scopedEngagementRows = analyticsConfig.engagementTypes.map((engagement) => {
+    const count = scopedRecords.filter((record) =>
+      recordMatchesEngagement(record, engagement),
+    ).length;
+    return {
+      ...engagement,
+      count,
+      percent: percentage(count, scopedRecords.length),
+    };
+  });
+  const maxScopedEngagement = Math.max(
+    ...scopedEngagementRows.map((row) => row.count),
+    1,
+  );
+
+  return (
+    <main className="analytics-main" data-scrape-page="cen-analytics-dashboard">
+      <TopNav currentView="analytics" />
+      <header className="analytics-header">
+        <div>
+          <p className="eyebrow">{records.length} response pages</p>
+          <h1>CEN Analytics Dashboard</h1>
+        </div>
+        <a className="primary-button" href={appHref()}>
+          All responses
+        </a>
+      </header>
+
+      <section className="stat-grid" aria-label="Analytics overview">
+        <StatCard label="Total responses" value={records.length} detail="survey pages" />
+        <StatCard
+          label="In focus domains"
+          value={analytics.matchedCount}
+          detail={`${percentage(analytics.matchedCount, records.length)}% of total`}
+        />
+        <StatCard
+          label="Outside focus domains"
+          value={analytics.outsideCount}
+          detail="uncategorized by this view"
+        />
+        <StatCard
+          label="Multi-domain"
+          value={analytics.multiDomainRecords.length}
+          detail="tagged in 2+ domains"
+        />
+      </section>
+
+      <section className="analytics-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Focus domains</p>
+            <h2>Response category coverage</h2>
+          </div>
+          <button
+            className={`filter-button ${selectedCategory === "all" ? "active" : ""}`}
+            type="button"
+            onClick={() => setSelectedCategory("all")}
+          >
+            All domains
+          </button>
+        </div>
+        <div className="category-grid">
+          {analytics.categoryRows.map((category) => (
+            <button
+              className={`category-card ${selectedCategory === category.key ? "active" : ""}`}
+              key={category.key}
+              type="button"
+              onClick={() => setSelectedCategory(category.key)}
+            >
+              <span>{category.label}</span>
+              <strong>{category.count}</strong>
+              <CountBar value={category.count} max={analytics.maxCategoryCount} />
+              <small>{category.percent}% of all responses</small>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="analytics-grid">
+        <article className="analytics-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">
+                {selectedCategoryRow ? selectedCategoryRow.label : "All responses"}
+              </p>
+              <h2>Engagement mix</h2>
+            </div>
+            <span className="panel-count">{scopedRecords.length} records</span>
+          </div>
+          <div className="bar-list">
+            {scopedEngagementRows.map((engagement) => (
+              <div className="bar-row" key={engagement.key}>
+                <div>
+                  <span>{engagement.label}</span>
+                  <strong>{engagement.count}</strong>
+                </div>
+                <CountBar value={engagement.count} max={maxScopedEngagement} />
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="analytics-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Cross-tab</p>
+              <h2>Domains by engagement</h2>
+            </div>
+          </div>
+          <div className="matrix-wrap">
+            <table className="matrix-table">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Training</th>
+                  <th>Research</th>
+                  <th>Student</th>
+                  <th>Event</th>
+                  <th>Funding</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.categoryRows.map((category) => {
+                  const counts = Object.fromEntries(
+                    category.engagements.map((engagement) => [
+                      engagement.key,
+                      engagement.count,
+                    ]),
+                  );
+                  return (
+                    <tr key={category.key}>
+                      <th>{category.label}</th>
+                      <td>{counts["workforce-training"]}</td>
+                      <td>{counts["research-rd"]}</td>
+                      <td>{counts["student-career"]}</td>
+                      <td>{counts["event-convening"]}</td>
+                      <td>{counts.funding}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section className="analytics-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Records</p>
+            <h2>{selectedCategoryRow ? selectedCategoryRow.label : "All responses"}</h2>
+          </div>
+          <span className="panel-count">{scopedMeta.length} shown</span>
+        </div>
+        <div className="analytics-response-list">
+          {scopedMeta.map(({ record, categories, engagements }) => (
+            <a
+              className="analytics-response-row"
+              href={appHref(record["Response ID"])}
+              key={record["Response ID"]}
+            >
+              <span className="response-id">{record["Response ID"]}</span>
+              <span className="analytics-response-title">{record["Activity Name"]}</span>
+              <span className="tag-stack">
+                <TagList items={categories} />
+              </span>
+              <span className="tag-stack engagement-tags">
+                <TagList
+                  items={engagements.slice(0, 3)}
+                  variant="engagement"
+                  emptyLabel="No engagement tag"
+                />
+              </span>
+            </a>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function TopNav({ currentId, currentView = "response" }) {
   const currentIndex = records.findIndex((record) => record["Response ID"] === currentId);
   const previous = currentIndex > 0 ? records[currentIndex - 1] : null;
   const next = currentIndex >= 0 && currentIndex < records.length - 1 ? records[currentIndex + 1] : null;
@@ -287,6 +608,8 @@ function TopNav({ currentId }) {
         CEN Response Viewer
       </a>
       <div className="nav-actions">
+        {currentView !== "index" && <a href={appHref()}>All responses</a>}
+        {currentView !== "analytics" && <a href={appHref("analytics")}>Analytics</a>}
         {previous && <a href={appHref(previous["Response ID"])}>Previous</a>}
         {next && <a href={appHref(next["Response ID"])}>Next</a>}
       </div>
@@ -380,14 +703,21 @@ function IndexPage() {
 
   return (
     <main className="index-main" data-scrape-page="cen-response-index">
-      <TopNav />
+      <TopNav currentView="index" />
       <header className="index-header">
-        <p className="eyebrow">{records.length} response pages</p>
-        <h1>CEN Survey Response Pages</h1>
-        <div className="stats">
-          <span>{counts.ce} CE</span>
-          <span>{counts.ps} PS</span>
-          <span>{counts.other} other</span>
+        <div>
+          <p className="eyebrow">{records.length} response pages</p>
+          <h1>CEN Survey Response Pages</h1>
+        </div>
+        <div className="header-actions">
+          <div className="stats">
+            <span>{counts.ce} CE</span>
+            <span>{counts.ps} PS</span>
+            <span>{counts.other} other</span>
+          </div>
+          <a className="primary-button" href={appHref("analytics")}>
+            Analytics
+          </a>
         </div>
       </header>
 
@@ -445,6 +775,7 @@ function NotFound({ id }) {
 function App() {
   const id = normalizePathId();
   if (!id) return <IndexPage />;
+  if (id === "analytics") return <AnalyticsPage />;
   const record = byId.get(id);
   return record ? <ResponsePage record={record} /> : <NotFound id={id} />;
 }

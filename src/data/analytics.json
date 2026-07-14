@@ -1,0 +1,159 @@
+{
+  "categories": [
+    {
+      "key": "health",
+      "label": "Health",
+      "responseIds": [
+        "218540037",
+        "218543908",
+        "218730371",
+        "219460992",
+        "219462544",
+        "219463394",
+        "219463804",
+        "219464544",
+        "219465905",
+        "219467009",
+        "219468099",
+        "219469041",
+        "219469891",
+        "219470618",
+        "219471686",
+        "219472593",
+        "219473463",
+        "219474580",
+        "219475457",
+        "219720780",
+        "220029164",
+        "222520507",
+        "222522145",
+        "222522259"
+      ]
+    },
+    {
+      "key": "k12",
+      "label": "K-12",
+      "responseIds": [
+        "214410711",
+        "218573696",
+        "218743968",
+        "218745844",
+        "220029164",
+        "220034844",
+        "222324780"
+      ]
+    },
+    {
+      "key": "sustainability",
+      "label": "Sustainability",
+      "responseIds": [
+        "215411534",
+        "215413427",
+        "215413786",
+        "218437314",
+        "218437898",
+        "218440398",
+        "218442565",
+        "218442955",
+        "218443315",
+        "218540352",
+        "218569017",
+        "218569843",
+        "218572357",
+        "218573696",
+        "218685230",
+        "220029164",
+        "220035812",
+        "222258007",
+        "222258308",
+        "222258421",
+        "222271599",
+        "222271862",
+        "222521092",
+        "222521338",
+        "222521455",
+        "222521571"
+      ]
+    },
+    {
+      "key": "aerospace-defense",
+      "label": "Aerospace/Defense",
+      "responseIds": [
+        "218442955",
+        "218542073",
+        "219981824",
+        "220035367",
+        "222257801",
+        "222271862",
+        "222521571"
+      ]
+    },
+    {
+      "key": "microelectronics",
+      "label": "Microelectronics",
+      "responseIds": [
+        "217364812",
+        "220034844",
+        "220035271",
+        "220035454",
+        "220035582",
+        "220035694",
+        "220036123",
+        "220036267",
+        "220982805",
+        "221227665",
+        "221228486",
+        "222258308",
+        "222457347"
+      ]
+    }
+  ],
+  "engagementTypes": [
+    {
+      "key": "workforce-training",
+      "label": "Workforce/training",
+      "roleLabel": "education/workforce-development partner",
+      "pattern": "executive education|professional development|training|workshop|upskilling|\\bcourse\\b|certificate|certification|cohort|master class|academy|learning experience"
+    },
+    {
+      "key": "research-rd",
+      "label": "Research/R&D",
+      "roleLabel": "research collaborator",
+      "pattern": "sponsored research|research funding|research project|research partnership|\\bR&D\\b|faculty research|IP licensing|faculty research opportunities"
+    },
+    {
+      "key": "student-career",
+      "label": "Student/career",
+      "roleLabel": "student engagement/career partner",
+      "pattern": "internship|career exposure|career exploration|capstone|class project|EPICS|eProjects|student-athlete"
+    },
+    {
+      "key": "event-convening",
+      "label": "Event/convening",
+      "roleLabel": "event/convening partner",
+      "pattern": "conference|summit|symposium|convening|event|innovation day|presentation|speaker|day event"
+    },
+    {
+      "key": "site-tour",
+      "label": "Site visit/tour",
+      "pattern": "site visit|study tour|tour to ASU|leadership immersion|immersion visit|multi-campus aerospace convening"
+    },
+    {
+      "key": "funding",
+      "label": "Funding/sponsorship",
+      "roleLabel": "funder/sponsor",
+      "pattern": "sponsor|sponsorship|donation|gift|funding|grant|philanthropy"
+    },
+    {
+      "key": "agreement",
+      "label": "Agreement/MOU",
+      "roleLabel": "strategic partnership/MOU partner",
+      "pattern": "\\bMOU\\b|\\bLOI\\b|agreement|contract|collaboration agreement|signed"
+    },
+    {
+      "key": "facility",
+      "label": "Facility/lab/equipment",
+      "pattern": "facility|physical lab|cleanroom|equipment|installation|renovation|CXFEL|Innovation Lab|Hatchery|Mission Design Lab"
+    }
+  ]
+}

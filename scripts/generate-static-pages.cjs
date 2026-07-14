@@ -5,8 +5,10 @@ const projectRoot = path.resolve(__dirname, "..");
 const distDir = path.join(projectRoot, "dist");
 const indexPath = path.join(distDir, "index.html");
 const dataPath = path.join(projectRoot, "src", "data", "responses.json");
+const analyticsPath = path.join(projectRoot, "src", "data", "analytics.json");
 
 const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
+const analyticsConfig = JSON.parse(fs.readFileSync(analyticsPath, "utf8"));
 const indexHtml = fs.readFileSync(indexPath, "utf8");
 
 function normalizeBasePath(value) {
@@ -27,6 +29,57 @@ const siteBasePath = normalizeBasePath(process.env.SITE_BASE_PATH);
 function hrefFor(pathSegment = "") {
   const cleanPath = String(pathSegment).replace(/^\/+/, "");
   return `${siteBasePath}${cleanPath}`;
+}
+
+const categoryIdSets = new Map(
+  analyticsConfig.categories.map((category) => [
+    category.key,
+    new Set(category.responseIds),
+  ]),
+);
+
+function analyticsText(record) {
+  return [
+    record["Activity Name"],
+    record["Activity Description (Short)"],
+    record["Community Organizations/Partners Involved"],
+    record["Organization Roles"],
+    record["Outputs (E/A)"],
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function recordCategories(record) {
+  return analyticsConfig.categories.filter((category) =>
+    categoryIdSets.get(category.key)?.has(record["Response ID"]),
+  );
+}
+
+function recordMatchesEngagement(record, engagement) {
+  const roles = displayValue(record["Organization Roles"]).toLowerCase();
+  if (engagement.roleLabel && roles.includes(engagement.roleLabel.toLowerCase())) {
+    return true;
+  }
+  return engagement.pattern
+    ? new RegExp(engagement.pattern, "i").test(analyticsText(record))
+    : false;
+}
+
+function recordEngagements(record) {
+  return analyticsConfig.engagementTypes.filter((engagement) =>
+    recordMatchesEngagement(record, engagement),
+  );
+}
+
+function percentage(value, total) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+}
+
+function countBar(value, max) {
+  const width = max ? Math.max(4, Math.round((value / max) * 100)) : 0;
+  return `<div class="count-bar" aria-hidden="true"><span style="width: ${width}%"></span></div>`;
 }
 
 const templateSections = [
@@ -363,6 +416,10 @@ function renderResponsePage(record) {
     >
       <nav class="top-nav" aria-label="Response navigation">
         <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
+        <div class="nav-actions">
+          <a href="${escapeAttribute(hrefFor())}">All responses</a>
+          <a href="${escapeAttribute(hrefFor("analytics"))}">Analytics</a>
+        </div>
       </nav>
       <header class="record-header">
         <div>
@@ -405,14 +462,22 @@ function renderIndexPage(records) {
     <main class="index-main" data-scrape-page="cen-response-index">
       <nav class="top-nav">
         <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
+        <div class="nav-actions">
+          <a href="${escapeAttribute(hrefFor("analytics"))}">Analytics</a>
+        </div>
       </nav>
       <header class="index-header">
-        <p class="eyebrow">${records.length} response pages</p>
-        <h1>CEN Survey Response Pages</h1>
-        <div class="stats">
-          <span>${counts.ce} CE</span>
-          <span>${counts.ps} PS</span>
-          <span>${counts.other} other</span>
+        <div>
+          <p class="eyebrow">${records.length} response pages</p>
+          <h1>CEN Survey Response Pages</h1>
+        </div>
+        <div class="header-actions">
+          <div class="stats">
+            <span>${counts.ce} CE</span>
+            <span>${counts.ps} PS</span>
+            <span>${counts.other} other</span>
+          </div>
+          <a class="primary-button" href="${escapeAttribute(hrefFor("analytics"))}">Analytics</a>
         </div>
       </header>
       <section class="response-list">
@@ -431,6 +496,195 @@ function renderIndexPage(records) {
             `;
           })
           .join("")}
+      </section>
+    </main>
+  `;
+}
+
+function renderAnalyticsPage(records) {
+  const categoryRows = analyticsConfig.categories.map((category) => {
+    const categoryRecords = records.filter((record) =>
+      categoryIdSets.get(category.key)?.has(record["Response ID"]),
+    );
+    return {
+      ...category,
+      records: categoryRecords,
+      count: categoryRecords.length,
+      percent: percentage(categoryRecords.length, records.length),
+    };
+  });
+  const taggedIds = new Set(
+    records
+      .filter((record) => recordCategories(record).length)
+      .map((record) => record["Response ID"]),
+  );
+  const multiDomainCount = records.filter((record) => recordCategories(record).length > 1).length;
+  const maxCategoryCount = Math.max(...categoryRows.map((row) => row.count), 1);
+  const engagementRows = analyticsConfig.engagementTypes.map((engagement) => {
+    const count = records.filter((record) =>
+      recordMatchesEngagement(record, engagement),
+    ).length;
+    return {
+      ...engagement,
+      count,
+      percent: percentage(count, records.length),
+    };
+  });
+  const maxEngagementCount = Math.max(...engagementRows.map((row) => row.count), 1);
+
+  return `
+    <main class="analytics-main" data-scrape-page="cen-analytics-dashboard">
+      <nav class="top-nav">
+        <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
+        <div class="nav-actions">
+          <a href="${escapeAttribute(hrefFor())}">All responses</a>
+        </div>
+      </nav>
+      <header class="analytics-header">
+        <div>
+          <p class="eyebrow">${records.length} response pages</p>
+          <h1>CEN Analytics Dashboard</h1>
+        </div>
+        <a class="primary-button" href="${escapeAttribute(hrefFor())}">All responses</a>
+      </header>
+      <section class="stat-grid" aria-label="Analytics overview">
+        <article class="stat-card"><p>Total responses</p><strong>${records.length}</strong><span>survey pages</span></article>
+        <article class="stat-card"><p>In focus domains</p><strong>${taggedIds.size}</strong><span>${percentage(taggedIds.size, records.length)}% of total</span></article>
+        <article class="stat-card"><p>Outside focus domains</p><strong>${records.length - taggedIds.size}</strong><span>uncategorized by this view</span></article>
+        <article class="stat-card"><p>Multi-domain</p><strong>${multiDomainCount}</strong><span>tagged in 2+ domains</span></article>
+      </section>
+      <section class="analytics-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Focus domains</p>
+            <h2>Response category coverage</h2>
+          </div>
+        </div>
+        <div class="category-grid">
+          ${categoryRows
+            .map(
+              (category) => `
+                <article class="category-card">
+                  <span>${escapeHtml(category.label)}</span>
+                  <strong>${category.count}</strong>
+                  ${countBar(category.count, maxCategoryCount)}
+                  <small>${category.percent}% of all responses</small>
+                </article>
+              `,
+            )
+            .join("")}
+        </div>
+      </section>
+      <section class="analytics-grid">
+        <article class="analytics-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">All responses</p>
+              <h2>Engagement mix</h2>
+            </div>
+            <span class="panel-count">${records.length} records</span>
+          </div>
+          <div class="bar-list">
+            ${engagementRows
+              .map(
+                (engagement) => `
+                  <div class="bar-row">
+                    <div><span>${escapeHtml(engagement.label)}</span><strong>${engagement.count}</strong></div>
+                    ${countBar(engagement.count, maxEngagementCount)}
+                  </div>
+                `,
+              )
+              .join("")}
+          </div>
+        </article>
+        <article class="analytics-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Cross-tab</p>
+              <h2>Domains by engagement</h2>
+            </div>
+          </div>
+          <div class="matrix-wrap">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Training</th>
+                  <th>Research</th>
+                  <th>Student</th>
+                  <th>Event</th>
+                  <th>Funding</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${categoryRows
+                  .map((category) => {
+                    const counts = Object.fromEntries(
+                      analyticsConfig.engagementTypes.map((engagement) => [
+                        engagement.key,
+                        category.records.filter((record) =>
+                          recordMatchesEngagement(record, engagement),
+                        ).length,
+                      ]),
+                    );
+                    return `
+                      <tr>
+                        <th>${escapeHtml(category.label)}</th>
+                        <td>${counts["workforce-training"]}</td>
+                        <td>${counts["research-rd"]}</td>
+                        <td>${counts["student-career"]}</td>
+                        <td>${counts["event-convening"]}</td>
+                        <td>${counts.funding}</td>
+                      </tr>
+                    `;
+                  })
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+      <section class="analytics-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Records</p>
+            <h2>All responses</h2>
+          </div>
+          <span class="panel-count">${records.length} shown</span>
+        </div>
+        <div class="analytics-response-list">
+          ${records
+            .map((record) => {
+              const id = routeSafeId(record["Response ID"]);
+              const categories = recordCategories(record);
+              const engagements = recordEngagements(record).slice(0, 3);
+              const categoryTags = categories.length
+                ? categories
+                    .map(
+                      (category) =>
+                        `<span class="tag domain">${escapeHtml(category.label)}</span>`,
+                    )
+                    .join("")
+                : `<span class="tag muted">Outside focus domains</span>`;
+              const engagementTags = engagements.length
+                ? engagements
+                    .map(
+                      (engagement) =>
+                        `<span class="tag engagement">${escapeHtml(engagement.label)}</span>`,
+                    )
+                    .join("")
+                : `<span class="tag muted">No engagement tag</span>`;
+              return `
+                <a class="analytics-response-row" href="${escapeAttribute(hrefFor(id))}">
+                  <span class="response-id">${escapeHtml(id)}</span>
+                  <span class="analytics-response-title">${escapeHtml(record["Activity Name"])}</span>
+                  <span class="tag-stack">${categoryTags}</span>
+                  <span class="tag-stack engagement-tags">${engagementTags}</span>
+                </a>
+              `;
+            })
+            .join("")}
+        </div>
       </section>
     </main>
   `;
@@ -462,6 +716,16 @@ const staticIndexHtml = injectContent(
 );
 
 fs.writeFileSync(indexPath, staticIndexHtml);
+
+const staticAnalyticsHtml = injectContent(
+  indexHtml,
+  renderAnalyticsPage(data.records),
+  "CEN Analytics Dashboard",
+);
+const analyticsDir = path.join(distDir, "analytics");
+fs.mkdirSync(analyticsDir, { recursive: true });
+fs.writeFileSync(path.join(analyticsDir, "index.html"), staticAnalyticsHtml);
+fs.writeFileSync(path.join(distDir, "analytics.html"), staticAnalyticsHtml);
 
 for (const record of data.records) {
   const id = routeSafeId(record["Response ID"]);

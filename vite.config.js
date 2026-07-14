@@ -3,5 +3,5 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.GITHUB_PAGES === "true" ? "/cen-data-dashboard/" : "./",
+  base: process.env.GITHUB_PAGES === "true" ? "/cen-data-dashboard/" : "/",
 });
