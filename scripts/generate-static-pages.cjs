@@ -463,21 +463,21 @@ for (const record of data.records) {
   fs.writeFileSync(path.join(distDir, `${id}.html`), pageHtml);
 }
 
-const vercelConfig = {
-  cleanUrls: true,
-  trailingSlash: false,
-  rewrites: [
-    {
-      source: "/(.*)",
-      destination: "/index.html",
-    },
-  ],
-};
+// const vercelConfig = {
+//   cleanUrls: true,
+//   trailingSlash: false,
+//   rewrites: [
+//     {
+//       source: "/(.*)",
+//       destination: "/index.html",
+//     },
+//   ],
+// };
 
-fs.writeFileSync(
-  path.join(distDir, "vercel.json"),
-  `${JSON.stringify(vercelConfig, null, 2)}\n`,
-);
+// fs.writeFileSync(
+//   path.join(distDir, "vercel.json"),
+//   `${JSON.stringify(vercelConfig, null, 2)}\n`,
+// );
 
 fs.writeFileSync(path.join(distDir, "404.html"), staticIndexHtml);
 
