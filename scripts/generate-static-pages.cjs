@@ -9,6 +9,26 @@ const dataPath = path.join(projectRoot, "src", "data", "responses.json");
 const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
 const indexHtml = fs.readFileSync(indexPath, "utf8");
 
+function normalizeBasePath(value) {
+  const raw = String(value || "/").trim();
+  if (raw === "." || raw === "./" || raw === "/") return "/";
+  let pathname = raw;
+  try {
+    pathname = new URL(raw).pathname;
+  } catch {
+    pathname = raw;
+  }
+  const trimmed = pathname.replace(/^\/+|\/+$/g, "");
+  return trimmed ? `/${trimmed}/` : "/";
+}
+
+const siteBasePath = normalizeBasePath(process.env.SITE_BASE_PATH);
+
+function hrefFor(pathSegment = "") {
+  const cleanPath = String(pathSegment).replace(/^\/+/, "");
+  return `${siteBasePath}${cleanPath}`;
+}
+
 const templateSections = [
   {
     title: "Activity Basics",
@@ -342,7 +362,7 @@ function renderResponsePage(record) {
       data-response-id="${escapeAttribute(id)}"
     >
       <nav class="top-nav" aria-label="Response navigation">
-        <a class="brand" href="/">CEN Response Viewer</a>
+        <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
       </nav>
       <header class="record-header">
         <div>
@@ -384,7 +404,7 @@ function renderIndexPage(records) {
   return `
     <main class="index-main" data-scrape-page="cen-response-index">
       <nav class="top-nav">
-        <a class="brand" href="/">CEN Response Viewer</a>
+        <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
       </nav>
       <header class="index-header">
         <p class="eyebrow">${records.length} response pages</p>
@@ -401,7 +421,7 @@ function renderIndexPage(records) {
             const id = routeSafeId(record["Response ID"]);
             const classification = displayValue(record["Public Service or Community Engagement"]);
             return `
-              <a class="response-row" href="/${escapeAttribute(id)}" data-response-id="${escapeAttribute(id)}">
+              <a class="response-row" href="${escapeAttribute(hrefFor(id))}" data-response-id="${escapeAttribute(id)}">
                 <span class="response-id">${escapeHtml(id)}</span>
                 <span class="response-title">${escapeHtml(record["Activity Name"])}</span>
                 <span class="row-pill ${classificationTone(classification)}">

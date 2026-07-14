@@ -6,6 +6,21 @@ import "./styles.css";
 const records = data.records;
 const byId = new Map(records.map((record) => [record["Response ID"], record]));
 
+function normalizeBasePath(value) {
+  const raw = String(value || "/").trim();
+  if (raw === "." || raw === "./" || raw === "/") return "/";
+  const pathname = new URL(raw, window.location.origin).pathname;
+  const trimmed = pathname.replace(/^\/+|\/+$/g, "");
+  return trimmed ? `/${trimmed}/` : "/";
+}
+
+const appBasePath = normalizeBasePath(import.meta.env.BASE_URL);
+
+function appHref(pathSegment = "") {
+  const cleanPath = String(pathSegment).replace(/^\/+/, "");
+  return `${appBasePath}${cleanPath}`;
+}
+
 const templateSections = [
   {
     title: "Activity Basics",
@@ -123,7 +138,13 @@ const templateSections = [
 ];
 
 function normalizePathId() {
-  const id = decodeURIComponent(window.location.pathname.replace(/^\/+/, "").trim());
+  let pathname = decodeURIComponent(window.location.pathname);
+  if (appBasePath !== "/") {
+    const baseWithoutSlash = appBasePath.replace(/\/$/, "");
+    if (pathname === baseWithoutSlash) pathname = "";
+    else if (pathname.startsWith(appBasePath)) pathname = pathname.slice(appBasePath.length);
+  }
+  const id = pathname.replace(/^\/+|\/+$/g, "").trim();
   return id || null;
 }
 
@@ -262,12 +283,12 @@ function TopNav({ currentId }) {
 
   return (
     <nav className="top-nav">
-      <a className="brand" href="/">
+      <a className="brand" href={appHref()}>
         CEN Response Viewer
       </a>
       <div className="nav-actions">
-        {previous && <a href={`/${previous["Response ID"]}`}>Previous</a>}
-        {next && <a href={`/${next["Response ID"]}`}>Next</a>}
+        {previous && <a href={appHref(previous["Response ID"])}>Previous</a>}
+        {next && <a href={appHref(next["Response ID"])}>Next</a>}
       </div>
     </nav>
   );
@@ -392,7 +413,7 @@ function IndexPage() {
             <a
               className="response-row"
               data-response-id={record["Response ID"]}
-              href={`/${record["Response ID"]}`}
+              href={appHref(record["Response ID"])}
               key={record["Response ID"]}
             >
               <span className="response-id">{record["Response ID"]}</span>
@@ -415,7 +436,7 @@ function NotFound({ id }) {
       <section className="not-found">
         <p className="eyebrow">No response found</p>
         <h1>{id}</h1>
-        <a href="/">Back to all responses</a>
+        <a href={appHref()}>Back to all responses</a>
       </section>
     </main>
   );

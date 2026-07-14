@@ -39,6 +39,9 @@ jobs:
 
       - name: Build Application
         run: npm run build
+        env:
+          GITHUB_PAGES: "true"
+          SITE_BASE_PATH: "/cen-data-dashboard/"
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
