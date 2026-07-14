@@ -5,10 +5,8 @@ const projectRoot = path.resolve(__dirname, "..");
 const distDir = path.join(projectRoot, "dist");
 const indexPath = path.join(distDir, "index.html");
 const dataPath = path.join(projectRoot, "src", "data", "responses.json");
-const analyticsPath = path.join(projectRoot, "src", "data", "analytics.json");
 
 const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
-const analyticsConfig = JSON.parse(fs.readFileSync(analyticsPath, "utf8"));
 const indexHtml = fs.readFileSync(indexPath, "utf8");
 
 function normalizeBasePath(value) {
@@ -766,10 +764,6 @@ function renderResponsePage(record) {
     >
       <nav class="top-nav" aria-label="Response navigation">
         <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
-        <div class="nav-actions">
-          <a href="${escapeAttribute(hrefFor())}">All responses</a>
-          <a href="${escapeAttribute(hrefFor("analytics"))}">Analytics</a>
-        </div>
       </nav>
       <header class="record-header">
         <div>
@@ -1125,16 +1119,6 @@ const staticIndexHtml = injectContent(
 );
 
 fs.writeFileSync(indexPath, staticIndexHtml);
-
-const staticAnalyticsHtml = injectContent(
-  indexHtml,
-  renderAnalyticsPage(data.records),
-  "CEN Analytics Dashboard",
-);
-const analyticsDir = path.join(distDir, "analytics");
-fs.mkdirSync(analyticsDir, { recursive: true });
-fs.writeFileSync(path.join(analyticsDir, "index.html"), staticAnalyticsHtml);
-fs.writeFileSync(path.join(distDir, "analytics.html"), staticAnalyticsHtml);
 
 for (const record of data.records) {
   const id = routeSafeId(record["Response ID"]);

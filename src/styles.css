@@ -66,9 +66,7 @@ main {
 }
 
 .nav-actions a,
-.not-found a,
-.primary-button,
-.filter-button {
+.not-found a {
   min-height: 36px;
   display: inline-flex;
   align-items: center;
@@ -272,12 +270,6 @@ h2 {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.header-actions {
-  display: grid;
-  justify-items: end;
-  gap: 10px;
 }
 
 .stats span {
@@ -1917,14 +1909,11 @@ button.engagement-signal-card {
     width: 100%;
   }
 
-  .stats,
-  .header-actions {
+  .stats {
     justify-content: flex-start;
-    justify-items: start;
   }
 
-  .response-title,
-  .analytics-response-title {
+  .response-title {
     white-space: normal;
   }
 }

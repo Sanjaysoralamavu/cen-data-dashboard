@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import analyticsConfig from "./data/analytics.json";
 import data from "./data/responses.json";
 import "./styles.css";
 
@@ -1133,7 +1132,7 @@ function IndexPage() {
 
   return (
     <main className="index-main" data-scrape-page="cen-response-index">
-      <TopNav currentView="index" />
+      <TopNav />
       <header className="index-header">
         <div>
           <p className="eyebrow">{records.length} response pages</p>
@@ -1205,7 +1204,6 @@ function NotFound({ id }) {
 function App() {
   const id = normalizePathId();
   if (!id) return <IndexPage />;
-  if (id === "analytics") return <AnalyticsPage />;
   const record = byId.get(id);
   return record ? <ResponsePage record={record} /> : <NotFound id={id} />;
 }
