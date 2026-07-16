@@ -1,4 +1,4 @@
-# CEN Data Dashboard - Plain-English Guide
+# CEN Data Dashboard
 
 ## Quick Links
 
