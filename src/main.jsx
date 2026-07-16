@@ -120,11 +120,11 @@ function compactSdgLabel(label) {
 
 function compactUnitLabel(label) {
   const knownLabels = {
-    "Mary Lou Fulton College for Teaching and Learning Innovation": "Mary Lou Fulton",
-    "Office of the Chief Operating Officer": "Office of COO",
-    "Corporate Engagement and Strategic Partnerships (Knowledge Enterprise)": "Corporate Engagement",
-    "Ira A. Fulton Schools of Engineering - Global Outreach and Extended Education (GOEE)": "Fulton GOEE",
-    "College of Global Futures - Lifelong Learning": "Global Futures",
+    "Mary Lou Fulton College for Teaching and Learning Innovation": "Mary Lou Fulton College for Teaching and Learning Innovation",
+    "Office of the Chief Operating Officer": "Office of the COO",
+    "Corporate Engagement and Strategic Partnerships (Knowledge Enterprise)": "Knowledge Enterprise",
+    "Ira A. Fulton Schools of Engineering - Global Outreach and Extended Education (GOEE)": "Global Outreach and Extended Education",
+    "College of Global Futures - Lifelong Learning": "College of Global Futures",
     "J. Orin Edson Entrepreneurship + Innovation Institute": "Edson E+I",
     "Walter Cronkite School of Journalism and Mass Communication": "Cronkite School",
     "W. P. Carey School of Business": "W. P. Carey",
