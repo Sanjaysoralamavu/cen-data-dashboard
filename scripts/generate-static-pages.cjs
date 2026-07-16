@@ -77,9 +77,359 @@ function percentage(value, total) {
   return Math.round((value / total) * 100);
 }
 
+function classificationSummary(sourceRecords) {
+  return sourceRecords.reduce(
+    (acc, record) => {
+      const classification = displayValue(record["Public Service or Community Engagement"]);
+      if (classification.startsWith("Community Engagement")) acc.ce += 1;
+      else if (classification.startsWith("Public Service")) acc.ps += 1;
+      else acc.other += 1;
+      return acc;
+    },
+    { ce: 0, ps: 0, other: 0 },
+  );
+}
+
+function engagementCountForKeys(sourceRecords, keys) {
+  const keySet = new Set(keys);
+  return sourceRecords.filter((record) =>
+    recordEngagements(record).some((engagement) => keySet.has(engagement.key)),
+  ).length;
+}
+
+function strongestCategory(categoryRows) {
+  return [...categoryRows].sort((a, b) => b.count - a.count)[0];
+}
+
+const signatureEngagements = [
+  { key: "workforce-training", label: "Training", tone: "training" },
+  { key: "research-rd", label: "Research", tone: "research" },
+  { key: "funding", label: "Funding", tone: "funding" },
+  { key: "agreement", label: "Agreements", tone: "agreement" },
+  { key: "student-career", label: "Students", tone: "student" },
+  { key: "event-convening", label: "Events", tone: "event" },
+  { key: "site-tour", label: "Tours", tone: "tour" },
+  { key: "facility", label: "Facilities", tone: "facility" },
+];
+
+function splitMetricEntries(value) {
+  const text = displayValue(value);
+  if (text === "Not specified in survey response" || text.startsWith("Not applicable")) {
+    return [];
+  }
+  return text
+    .split(/;|\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function compactSdgLabel(label) {
+  return label.replace(/^SDG\s+(\d+):\s+/, "SDG $1 - ");
+}
+
+function compactUnitLabel(label) {
+  const knownLabels = {
+    "Mary Lou Fulton College for Teaching and Learning Innovation": "Mary Lou Fulton",
+    "Office of the Chief Operating Officer": "Office of COO",
+    "Corporate Engagement and Strategic Partnerships (Knowledge Enterprise)": "Corporate Engagement",
+    "Ira A. Fulton Schools of Engineering - Global Outreach and Extended Education (GOEE)": "Fulton GOEE",
+    "College of Global Futures - Lifelong Learning": "Global Futures",
+    "J. Orin Edson Entrepreneurship + Innovation Institute": "Edson E+I",
+    "Walter Cronkite School of Journalism and Mass Communication": "Cronkite School",
+    "W. P. Carey School of Business": "W. P. Carey",
+    "ASU Foundation": "ASU Foundation",
+    "Julie Ann Wrigley Global Futures Laboratory": "Global Futures Lab",
+  };
+  return knownLabels[label] || label.replace(/\s*\([^)]*\)/g, "").slice(0, 34);
+}
+
+function rankedMetricRows(sourceRecords, field, { limit = 6, labelFormatter = (value) => value } = {}) {
+  const counts = new Map();
+  sourceRecords.forEach((record) => {
+    splitMetricEntries(record[field]).forEach((entry) => {
+      counts.set(entry, (counts.get(entry) || 0) + 1);
+    });
+  });
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([label, count]) => ({
+      key: label,
+      label: labelFormatter(label),
+      fullLabel: label,
+      count,
+      percent: percentage(count, sourceRecords.length),
+    }));
+}
+
+function domainEngagementSignatureRows(categoryRows) {
+  return [...categoryRows]
+    .sort((a, b) => b.count - a.count)
+    .map((category) => {
+      const segments = signatureEngagements.map((definition) => {
+        const match = category.engagements.find((engagement) => engagement.key === definition.key);
+        return {
+          ...definition,
+          count: match?.count || 0,
+        };
+      });
+      const signalTotal = segments.reduce((sum, segment) => sum + segment.count, 0);
+      return {
+        key: category.key,
+        label: category.label,
+        count: category.count,
+        segments: segments.map((segment) => ({
+          ...segment,
+          percent: signalTotal ? Math.round((segment.count / signalTotal) * 100) : 0,
+        })),
+      };
+    });
+}
+
 function countBar(value, max) {
   const width = max ? Math.max(4, Math.round((value / max) * 100)) : 0;
   return `<div class="count-bar" aria-hidden="true"><span style="width: ${width}%"></span></div>`;
+}
+
+function ringMetric(value, total, label) {
+  const percent = percentage(value, total);
+  return `
+    <div class="ring-metric" style="--metric-percent: ${percent}%" aria-label="${escapeAttribute(`${label}: ${percent}%`)}">
+      <strong>${percent}%</strong>
+      <span>${escapeHtml(label)}</span>
+    </div>
+  `;
+}
+
+function classificationMeter(counts, total) {
+  const ce = percentage(counts.ce, total);
+  const ps = percentage(counts.ps, total);
+  const other = Math.max(0, 100 - ce - ps);
+  return `
+    <div class="classification-meter" aria-label="Classification split">
+      <div class="classification-track">
+        <span class="ce" style="width: ${ce}%"></span>
+        <span class="ps" style="width: ${ps}%"></span>
+        ${other > 0 ? `<span class="other" style="width: ${other}%"></span>` : ""}
+      </div>
+      <div class="classification-legend">
+        <span>${counts.ce} CE</span>
+        <span>${counts.ps} PS</span>
+        ${counts.other > 0 ? `<span>${counts.other} other</span>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function trendStrip(rows) {
+  const max = Math.max(...rows.map((row) => row.count), 1);
+  return `
+    <div class="trend-strip" aria-hidden="true">
+      ${rows
+        .map(
+          (row) =>
+            `<span style="height: ${Math.max(18, Math.round((row.count / max) * 68))}px" title="${escapeAttribute(`${row.label}: ${row.count}`)}"></span>`,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function focusDomainRotator(rows) {
+  return `
+    <div class="focus-domain-rotator" aria-label="${escapeAttribute(`Top 3 focus domains: ${rows.map((row) => row.label).join(", ")}`)}">
+      <span>Top 3 focus domains</span>
+      <div class="focus-domain-slides">
+        ${rows
+          .map(
+            (row, index) => `
+              <div class="focus-domain-slide" style="--slide-delay: ${index * 5}s">
+                <strong>${escapeHtml(row.label)}</strong>
+                <small>${row.count} responses / ${row.percent}% of total</small>
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function rankedMetricChart({ eyebrow, title, rows, total, ariaLabel }) {
+  const max = Math.max(...rows.map((row) => row.count), 1);
+  return `
+    <article class="data-chart-card ranked-chart-card">
+      <div class="data-chart-heading">
+        <div>
+          <p class="eyebrow">${escapeHtml(eyebrow)}</p>
+          <h2>${escapeHtml(title)}</h2>
+        </div>
+        <span>${total} responses</span>
+      </div>
+      <div class="ranked-chart-list" role="list" aria-label="${escapeAttribute(ariaLabel)}">
+        ${rows
+          .map((row) => {
+            const width = row.count ? Math.max(6, Math.round((row.count / max) * 100)) : 0;
+            return `
+              <div
+                class="ranked-chart-row"
+                role="listitem"
+                style="--bar-width: ${width}%"
+                title="${escapeAttribute(`${row.fullLabel || row.label}: ${row.count} responses (${row.percent}%)`)}"
+                aria-label="${escapeAttribute(`${row.fullLabel || row.label}: ${row.count} responses, ${row.percent}%`)}"
+              >
+                <div>
+                  <span>${escapeHtml(row.label)}</span>
+                  <strong>${row.count}</strong>
+                </div>
+                <span class="ranked-chart-track" aria-hidden="true"><span></span></span>
+                <small>${row.percent}%</small>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function domainEngagementSignatureChart(rows) {
+  return `
+    <article class="data-chart-card signature-chart-card">
+      <div class="data-chart-heading">
+        <div>
+          <p class="eyebrow">Domain engagement signature</p>
+          <h2>Signal mix by focus domain</h2>
+        </div>
+        <span>${rows.length} domains</span>
+      </div>
+      <div class="signature-legend" aria-label="Engagement signal legend">
+        ${signatureEngagements
+          .map(
+            (segment) => `
+              <span class="${escapeAttribute(segment.tone)}">
+                <i aria-hidden="true"></i>${escapeHtml(segment.label)}
+              </span>
+            `,
+          )
+          .join("")}
+      </div>
+      <div class="signature-row-list" role="list" aria-label="Engagement signal mix by focus domain">
+        ${rows
+          .map(
+            (row) => `
+              <div class="signature-row" role="listitem">
+                <div class="signature-row-label">
+                  <span>${escapeHtml(row.label)}</span>
+                  <strong>${row.count}</strong>
+                </div>
+                <div class="signature-stack" aria-label="${escapeAttribute(`${row.label} engagement signal mix`)}">
+                  ${row.segments
+                    .map(
+                      (segment) => `
+                        <span
+                          class="${escapeAttribute(segment.tone)}"
+                          style="min-width: ${segment.count ? 2 : 0}px; width: ${segment.percent}%"
+                          title="${escapeAttribute(`${segment.label}: ${segment.count}`)}"
+                          aria-label="${escapeAttribute(`${segment.label}: ${segment.count}`)}"
+                        ></span>
+                      `,
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function portfolioChartDeck(sheets) {
+  return `
+    <div class="chart-deck chart-deck-static">
+      ${sheets
+        .map(
+          (sheet, index) => `
+            <input
+              class="chart-deck-input"
+              type="radio"
+              name="portfolio-evidence-chart"
+              id="portfolio-chart-control-${escapeAttribute(sheet.id)}"
+              ${index === 0 ? "checked" : ""}
+            />
+          `,
+        )
+        .join("")}
+      <div class="chart-navigation" role="tablist" aria-label="Portfolio evidence charts">
+        ${sheets
+          .map(
+            (sheet, index) => `
+              <label
+                class="chart-nav-button"
+                for="portfolio-chart-control-${escapeAttribute(sheet.id)}"
+                role="tab"
+                aria-controls="portfolio-chart-${escapeAttribute(sheet.id)}"
+              >
+                <span>${String(index + 1).padStart(2, "0")}</span>
+                <strong>${escapeHtml(sheet.navTitle)}</strong>
+                <small>${escapeHtml(sheet.navDetail)}</small>
+              </label>
+            `,
+          )
+          .join("")}
+      </div>
+      <div class="chart-stage">
+        ${sheets
+          .map((sheet, index) => {
+            const offset = index;
+            const depth = Math.abs(offset);
+            const sheetX = depth ? 18 * depth + 8 * offset : 0;
+            return `
+              <div
+                class="chart-sheet chart-sheet-${escapeAttribute(sheet.id)}"
+                id="portfolio-chart-${escapeAttribute(sheet.id)}"
+                role="tabpanel"
+                style="--sheet-depth: ${depth}; --sheet-opacity: ${Math.max(0.08, 0.32 - depth * 0.1)}; --sheet-rotate: ${offset * -0.25}deg; --sheet-scale: ${Math.max(0.92, 1 - depth * 0.025)}; --sheet-x: ${sheetX}px; --sheet-y: ${14 * depth}px"
+              >
+                ${sheet.content}
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function miniRank(rows) {
+  return `
+    <div class="mini-rank">
+      ${rows
+        .slice(0, 3)
+        .map(
+          (row, index) =>
+            `<span><b>${index + 1}</b>${escapeHtml(row.label)}</span>`,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function kpiCard({ label, value, detail, note, tone = "maroon", body = "" }) {
+  return `
+    <article class="kpi-card ${escapeAttribute(tone)}">
+      <div>
+        <p>${escapeHtml(label)}</p>
+        <strong>${escapeHtml(value)}</strong>
+        ${detail ? `<span>${escapeHtml(detail)}</span>` : ""}
+      </div>
+      ${body}
+      ${note ? `<small>${escapeHtml(note)}</small>` : ""}
+    </article>
+  `;
 }
 
 const templateSections = [
@@ -462,9 +812,7 @@ function renderIndexPage(records) {
     <main class="index-main" data-scrape-page="cen-response-index">
       <nav class="top-nav">
         <a class="brand" href="${escapeAttribute(hrefFor())}">CEN Response Viewer</a>
-        <div class="nav-actions">
-          <a href="${escapeAttribute(hrefFor("analytics"))}">Analytics</a>
-        </div>
+        <div class="nav-actions"></div>
       </nav>
       <header class="index-header">
         <div>
@@ -475,7 +823,7 @@ function renderIndexPage(records) {
           <div class="stats">
             <span>${counts.ce} CE</span>
             <span>${counts.ps} PS</span>
-            <span>${counts.other} other</span>
+            ${counts.other > 0 ? `<span>${counts.other} other</span>` : ""}
           </div>
           <a class="primary-button" href="${escapeAttribute(hrefFor("analytics"))}">Analytics</a>
         </div>
@@ -511,6 +859,12 @@ function renderAnalyticsPage(records) {
       records: categoryRecords,
       count: categoryRecords.length,
       percent: percentage(categoryRecords.length, records.length),
+      engagements: analyticsConfig.engagementTypes.map((engagement) => ({
+        ...engagement,
+        count: categoryRecords.filter((record) =>
+          recordMatchesEngagement(record, engagement),
+        ).length,
+      })),
     };
   });
   const taggedIds = new Set(
@@ -518,7 +872,26 @@ function renderAnalyticsPage(records) {
       .filter((record) => recordCategories(record).length)
       .map((record) => record["Response ID"]),
   );
-  const multiDomainCount = records.filter((record) => recordCategories(record).length > 1).length;
+  const classification = classificationSummary(records);
+  const topCategory = strongestCategory(categoryRows);
+  const rankedCategories = [...categoryRows].sort((a, b) => b.count - a.count);
+  const topFocusDomains = rankedCategories.slice(0, 3);
+  const studentWorkforceCount = engagementCountForKeys(records, [
+    "student-career",
+    "workforce-training",
+  ]);
+  const researchStrategicCount = engagementCountForKeys(records, [
+    "research-rd",
+    "agreement",
+    "facility",
+  ]);
+  const sdgAlignment = rankedMetricRows(records, "SDGs", {
+    labelFormatter: compactSdgLabel,
+  });
+  const topUnits = rankedMetricRows(records, "ASU Units Involved", {
+    labelFormatter: compactUnitLabel,
+  });
+  const domainEngagementSignature = domainEngagementSignatureRows(categoryRows);
   const maxCategoryCount = Math.max(...categoryRows.map((row) => row.count), 1);
   const engagementRows = analyticsConfig.engagementTypes.map((engagement) => {
     const count = records.filter((record) =>
@@ -540,32 +913,110 @@ function renderAnalyticsPage(records) {
           <a href="${escapeAttribute(hrefFor())}">All responses</a>
         </div>
       </nav>
-      <header class="analytics-header">
-        <div>
-          <p class="eyebrow">${records.length} response pages</p>
+      <header class="analytics-hero">
+        <div class="analytics-hero-copy">
+          <p class="eyebrow">${records.length} validated response pages</p>
           <h1>CEN Analytics Dashboard</h1>
+          <p>
+            Portfolio view of focus domains, engagement type, student/workforce activity,
+            research partnerships, and strategic relationship signals across the cleaned
+            survey dataset.
+          </p>
         </div>
-        <a class="primary-button" href="${escapeAttribute(hrefFor())}">All responses</a>
+        <div class="analytics-hero-visual" aria-label="Dashboard signal summary">
+          ${trendStrip(topFocusDomains)}
+          ${focusDomainRotator(topFocusDomains)}
+        </div>
       </header>
-      <section class="stat-grid" aria-label="Analytics overview">
-        <article class="stat-card"><p>Total responses</p><strong>${records.length}</strong><span>survey pages</span></article>
-        <article class="stat-card"><p>In focus domains</p><strong>${taggedIds.size}</strong><span>${percentage(taggedIds.size, records.length)}% of total</span></article>
-        <article class="stat-card"><p>Outside focus domains</p><strong>${records.length - taggedIds.size}</strong><span>uncategorized by this view</span></article>
-        <article class="stat-card"><p>Multi-domain</p><strong>${multiDomainCount}</strong><span>tagged in 2+ domains</span></article>
+      <section class="kpi-grid" aria-label="Analytics KPI overview">
+        ${kpiCard({
+          label: "Total responses",
+          value: records.length,
+          detail: "validated survey pages",
+          note: `${taggedIds.size} in five focus domains`,
+          tone: "gold",
+        })}
+        ${kpiCard({
+          label: "Engagement classification",
+          value: `${classification.ce} CE`,
+          detail: `${classification.ps} PS${classification.other > 0 ? ` / ${classification.other} other` : ""}`,
+          tone: "maroon",
+          body: classificationMeter(classification, records.length),
+        })}
+        ${kpiCard({
+          label: "Top focus category",
+          value: topCategory.label,
+          detail: `${topCategory.count} responses / ${topCategory.percent}%`,
+          tone: "maroon",
+        })}
+        ${kpiCard({
+          label: "Student / workforce",
+          value: studentWorkforceCount,
+          detail: `${percentage(studentWorkforceCount, records.length)}% of responses`,
+          tone: "gold",
+        })}
+        ${kpiCard({
+          label: "Research / strategic",
+          value: researchStrategicCount,
+          detail: `${percentage(researchStrategicCount, records.length)}% of responses`,
+          tone: "maroon",
+        })}
       </section>
-      <section class="analytics-panel">
+      <section class="analytics-panel data-charts-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Charts</p>
+            <h2>Portfolio evidence</h2>
+          </div>
+          <span class="panel-count">${records.length} response pages</span>
+        </div>
+        ${portfolioChartDeck([
+          {
+            id: "sdg",
+            navTitle: "SDG alignment",
+            navDetail: "Strategic goals",
+            content: rankedMetricChart({
+              eyebrow: "SDG alignment",
+              title: "Strategic goals",
+              rows: sdgAlignment,
+              total: records.length,
+              ariaLabel: "Ranked chart showing SDG alignment across response pages",
+            }),
+          },
+          {
+            id: "units",
+            navTitle: "Top ASU units",
+            navDetail: "Internal contributors",
+            content: rankedMetricChart({
+              eyebrow: "Top ASU units",
+              title: "Internal contributors",
+              rows: topUnits,
+              total: records.length,
+              ariaLabel: "Ranked chart showing top ASU units involved",
+            }),
+          },
+          {
+            id: "domain",
+            navTitle: "Domain mix",
+            navDetail: "Engagement signature",
+            content: domainEngagementSignatureChart(domainEngagementSignature),
+          },
+        ])}
+      </section>
+      <section class="analytics-grid focus-grid">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Focus domains</p>
-            <h2>Response category coverage</h2>
+            <h2>Category coverage</h2>
           </div>
+          <button class="filter-button reset active" type="button">All domains</button>
         </div>
         <div class="category-grid">
-          ${categoryRows
+          ${rankedCategories
             .map(
               (category) => `
                 <article class="category-card">
-                  <span>${escapeHtml(category.label)}</span>
+                  <span class="category-label">${escapeHtml(category.label)}</span>
                   <strong>${category.count}</strong>
                   ${countBar(category.count, maxCategoryCount)}
                   <small>${category.percent}% of all responses</small>
@@ -575,80 +1026,38 @@ function renderAnalyticsPage(records) {
             .join("")}
         </div>
       </section>
-      <section class="analytics-grid">
-        <article class="analytics-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">All responses</p>
-              <h2>Engagement mix</h2>
-            </div>
-            <span class="panel-count">${records.length} records</span>
-          </div>
-          <div class="bar-list">
-            ${engagementRows
-              .map(
-                (engagement) => `
-                  <div class="bar-row">
-                    <div><span>${escapeHtml(engagement.label)}</span><strong>${engagement.count}</strong></div>
-                    ${countBar(engagement.count, maxEngagementCount)}
-                  </div>
-                `,
-              )
-              .join("")}
-          </div>
-        </article>
-        <article class="analytics-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Cross-tab</p>
-              <h2>Domains by engagement</h2>
-            </div>
-          </div>
-          <div class="matrix-wrap">
-            <table class="matrix-table">
-              <thead>
-                <tr>
-                  <th>Domain</th>
-                  <th>Training</th>
-                  <th>Research</th>
-                  <th>Student</th>
-                  <th>Event</th>
-                  <th>Funding</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${categoryRows
-                  .map((category) => {
-                    const counts = Object.fromEntries(
-                      analyticsConfig.engagementTypes.map((engagement) => [
-                        engagement.key,
-                        category.records.filter((record) =>
-                          recordMatchesEngagement(record, engagement),
-                        ).length,
-                      ]),
-                    );
-                    return `
-                      <tr>
-                        <th>${escapeHtml(category.label)}</th>
-                        <td>${counts["workforce-training"]}</td>
-                        <td>${counts["research-rd"]}</td>
-                        <td>${counts["student-career"]}</td>
-                        <td>${counts["event-convening"]}</td>
-                        <td>${counts.funding}</td>
-                      </tr>
-                    `;
-                  })
-                  .join("")}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </section>
-      <section class="analytics-panel">
+      <section class="analytics-panel engagement-panel">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">Records</p>
-            <h2>All responses</h2>
+            <p class="eyebrow">All responses</p>
+            <h2>Engagement signals</h2>
+          </div>
+          <span class="panel-count">${records.length} records</span>
+        </div>
+        <div class="engagement-signal-grid">
+          <article class="engagement-signal-card active">
+            <div><span>All engagement types</span><strong>${records.length}</strong></div>
+            ${countBar(records.length, records.length)}
+            <small>100% of all responses</small>
+          </article>
+          ${engagementRows
+            .map(
+              (engagement) => `
+                <article class="engagement-signal-card">
+                  <div><span>${escapeHtml(engagement.label)}</span><strong>${engagement.count}</strong></div>
+                  ${countBar(engagement.count, maxEngagementCount)}
+                  <small>${engagement.percent}% of current records</small>
+                </article>
+              `,
+            )
+            .join("")}
+        </div>
+      </section>
+      <section class="analytics-panel record-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Filtered records</p>
+            <h2>All focus domains / all engagement types</h2>
           </div>
           <span class="panel-count">${records.length} shown</span>
         </div>
