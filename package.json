@@ -6,9 +6,10 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
-  },
-  "devDependencies": {}
+    "react-dom": "latest",
+    "react-ga4": "^3.0.1",
+    "react-router-dom": "^7.18.1",
+    "vite": "latest"
+  }
 }

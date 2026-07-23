@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import analyticsConfig from "./data/analytics.json";
 import data from "./data/responses.json";
 import "./styles.css";
+import AnalyticsTracker from "./Analytics.jsx";
 
 const records = data.records;
 const byId = new Map(records.map((record) => [record["Response ID"], record]));
@@ -1204,10 +1205,17 @@ function NotFound({ id }) {
 
 function App() {
   const id = normalizePathId();
-  if (!id) return <IndexPage />;
-  if (id === "analytics") return <AnalyticsPage />;
-  const record = byId.get(id);
-  return record ? <ResponsePage record={record} /> : <NotFound id={id} />;
+  return (
+    <>
+      <AnalyticsTracker id={id} />
+      {(() => {
+        if (!id) return <IndexPage />;
+        if (id === "analytics") return <AnalyticsPage />;
+        const record = byId.get(id);
+        return record ? <ResponsePage record={record} /> : <NotFound id={id} />;
+      })()}
+    </>
+  );
 }
 
 createRoot(document.getElementById("root")).render(<App />);

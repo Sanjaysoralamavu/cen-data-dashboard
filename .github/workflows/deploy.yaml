@@ -42,6 +42,7 @@ jobs:
         env:
           GITHUB_PAGES: "true"
           SITE_BASE_PATH: "/cen-data-dashboard/"
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
