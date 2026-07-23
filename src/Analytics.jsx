@@ -1,12 +1,19 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import ReactGA from 'react-ga4';
 
 // Retrieve the tracking ID from Vite environment variables
 const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
-export default function AnalyticsTracker() {
-  const location = useLocation();
+function currentPage() {
+  if (typeof window === 'undefined') {
+    return '/';
+  }
+
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+export default function AnalyticsTracker({ id }) {
+  const trackedPage = useRef('');
 
   // Initialize GA4 exactly once when the application starts
   useEffect(() => {
@@ -17,13 +24,21 @@ export default function AnalyticsTracker() {
 
   // Send a pageview event every time the URL path changes
   useEffect(() => {
-    if (GA_ID) {
-      ReactGA.send({
-        hitType: 'pageview',
-        page: location.pathname + location.search,
-      });
+    if (!GA_ID) {
+      return;
     }
-  }, [location]);
+
+    const page = currentPage();
+    if (trackedPage.current === page) {
+      return;
+    }
+
+    trackedPage.current = page;
+    ReactGA.send({
+      hitType: 'pageview',
+      page,
+    });
+  }, [id]);
 
   return null;
 }
