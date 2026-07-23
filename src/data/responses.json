@@ -1,7 +1,7 @@
 {
-  "source": "/Users/sanjaysdev/Documents/New project/outputs/cen-response-viewer/resources/cen_response_collaboratory_validated_titles_descriptions.xlsx",
-  "sheet": "Sheet1",
-  "rowCount": 116,
+  "source": "/Users/sanjaysdev/Documents/New project/outputs/cen-data-dashboard/resources/cen_response_collaboratory_from_json.csv",
+  "sheet": "CSV",
+  "rowCount": 117,
   "headers": [
     "Response ID",
     "Activity Name",
@@ -3863,6 +3863,39 @@
       "Community Individuals Served": ", participants",
       "Community Views of Activity": "Not specified in survey response; no direct community/partner quote provided.",
       "Systematic Process for Collecting Data": "Partially specified/inferred - the source narrative references data collection, reporting, feedback, analysis, participation counts, outcomes, metrics, or research activity. Source basis: In response to Starbucks’ workforce restructuring efforts, ASU partnered with Starbucks to provide impacted employees with access, at no cost, to a curated portfolio of professional development programs designed to support career transition, reskilling, and career advancement. Through a dedicated learning portal, participants can access learning opportunities in high-demand areas including artificial intelligence, data analytics, leadership, sustainability, and entrepreneurship."
+    },
+    {
+      "Response ID": "225935709",
+      "Activity Name": "Mayo Clinic-ASU FY26 Strategic Health Innovation Partnership",
+      "Public Service or Community Engagement": "Community Engagement (CE) - formal partnership, reciprocal agreements, jointly developed programs, and shared research/education initiatives indicate collaborative structure and mutual benefit.",
+      "Activity Description (Short)": "FY26 accomplishments in the Mayo Clinic-ASU partnership included the launch of the Medical Learning Research Seed Grant Program, reciprocal core facilities agreements, continued development of the Doctor of Nursing Practice Nurse Anesthesia program, the inaugural IMPACT master's cohort, the Health Care Accelerator, and the emerging Engineering Regenerative Therapeutics Seed Grant Program. The work advances medical and health professions education, shared research infrastructure, clinical innovation, workforce development, and commercialization by combining Mayo Clinic's clinical and translational expertise with ASU's strengths in engineering, AI, biomaterials, advanced manufacturing, and education.",
+      "Start Date": "2025-07-01 (inferred from FY26 survey window)",
+      "End Date": "2026-06-30 (inferred from FY26 survey window)",
+      "ASU Faculty/Staff Involved": "Eric Moreno (Associate Director, Business Development) - ericmoreno@asu.edu; Sarah Stabenfeldt (ASU collaborator; title not specified); Jessica Rousset (ASU collaborator; title not specified)",
+      "ASU Units Involved": "Knowledge Enterprise; Corporate Engagement and Strategic Partnerships (CESP); Office of the Vice President for Research; ASU Health; Ira A. Fulton Schools of Engineering; Office of the University Provost",
+      "Community Organizations/Partners Involved": "Mayo Clinic",
+      "Community Contacts": "Mayo Clinic Education Shield leadership; Mayo Clinic Research Shield leadership; Mayo Clinic clinicians, mentors, and advisors (specific contact names not provided)",
+      "Other Institutions": "Mayo Clinic",
+      "Organization Roles": "Mayo Clinic | strategic partner, research collaborator, education/workforce-development partner, reciprocal core facilities partner, clinical mentor/advisor, accelerator collaborator",
+      "Mutual Benefits": "The partnership created mutual benefit through jointly developed education, research, infrastructure, and innovation programs. ASU and Mayo Clinic launched the Medical Learning Research Seed Grant Program, funded 4 projects, executed reciprocal core facilities agreements allowing researchers at both institutions to access shared research infrastructure at internal rates, advanced the DNP-NA collaboration agreement and accreditation pathway, supported IMPACT students working with Mayo Clinic clinicians and mentors, and developed ERTx as a regenerative therapeutics platform combining Mayo Clinic clinical/translational expertise with ASU engineering, AI, biomaterials, and advanced manufacturing strengths.",
+      "Mutual Benefits Articulated by Both?": "Partially - the ASU-authored response describes reciprocal benefit and joint activity with Mayo Clinic, including \"reciprocal core facilities agreements,\" \"developed in partnership with Mayo Clinic's Education Shield,\" and \"developed in partnership with Mayo Clinic's Research Shield leadership,\" but no direct quote from Mayo Clinic or an external community representative is provided.",
+      "Activity Location - Physical": "ASU and Mayo Clinic partnership locations; Arizona; SkySong and 850 PBC mentioned as potential locations for companies exploring Arizona operations",
+      "Activity Location - Virtual": "https://www.healthcareitnews.com/podcast/advancing-healthcare-innovation-mayo-clinic-asu-health-care-accelerator-and-industry ; https://watch.yurview.com/arizonaliving/season:5/videos/asu-health-futures-twin-arrows-navajo-casino-resort-more-arizona-living",
+      "Is the Activity Funded?": "Yes/likely - the Medical Learning Research Seed Grant Program funded 4 projects; the Engineering Regenerative Therapeutics Seed Grant Program released an inaugural funding opportunity in May 2026; the activity also references attracting industry partners, philanthropy, and large-scale external funding.",
+      "Target Population(s)": "College Students; Adults (25-64)",
+      "SDGs": "SDG 3: Good Health and Well-being; SDG 4: Quality Education; SDG 8: Decent Work and Economic Growth; SDG 9: Industry, Innovation and Infrastructure; SDG 17: Partnerships for the Goals",
+      "Areas of Focus (with specific subcategories)": "Health and Wellness: healthcare innovation, clinical research, medical technologies, patient care; Education: health professions education, student learning, workforce development; Community and Economic Development: entrepreneurship, commercialization, economic development",
+      "Connected to Credit-Bearing Courses?": "Yes/likely - the source describes the Doctor of Nursing Practice Nurse Anesthesia (DNP-NA) Program and the Master of Science in Innovations in Medical and Patient Care Technologies (IMPACT), both academic/degree-program activities; specific course numbers are not provided.",
+      "Students Outside Coursework?": "Yes/likely - the IMPACT cohort included seven students spending the year with Mayo Clinic clinicians and mentors to develop solutions addressing unmet clinical needs; the program is expected to expand to twelve students in FY27.",
+      "Directly Connected to Scholarship? (Type(s))": "Yes - connected to medical education research, seed grant-funded research, clinical/translational research, reciprocal research infrastructure, regenerative therapeutics, AI, biomaterials, advanced manufacturing, and commercialization research. Type(s): applied research; translational research; clinical research; medical/health professions education research; seed grant research collaboration.",
+      "IRB Protocol?": "Not specified in survey response",
+      "Scholarly Product(s) (E/A)": "Research project(s) | E: X | A: X; Seed grant-funded project(s) | E: X | A: X; Accreditation/program materials | E: | A: X; Formal collaboration/core facilities agreement(s) | E: | A: X",
+      "Outputs (E/A)": "Education - Adult | E: | A: X; Education - Continuing | E: | A: X; Media interview(s)/op-ed article(s)/editorial(s) | E: | A: X; Website(s) - Community | E: | A: X",
+      "Institutional Outcomes (E/A)": "Funding - Activity | E: X | A: X; Interdisciplinary opportunity(ies) | E: | A: X; Student - Academic content | E: | A: X; Student - Professional growth | E: | A: X; Town-Gown relationship(s) | E: | A: X",
+      "Impacts on Community (E/A)": "Campus relationship(s) or partnerships | E: | A: X; Connection(s) to other community group(s)/network(s) | E: | A: X; Operation(s) | E: | A: X; Insight(s) into partner organization program(s) | E: | A: X; Public Recognition | E: | A: X; Resource quantity(ies) | E: | A: X; Resource use(s) | E: | A: X; Capacity to serve client(s) | E: X | A: X; Service(s) to client(s) | E: X | A: X",
+      "Community Individuals Served": "Not specified as a community-individual count. Related activity counts: 9 seed grant applications, 4 funded projects, 7 IMPACT students, 10 Health Care Accelerator companies from 6 countries, planned expansion to 12 IMPACT students in FY27.",
+      "Community Views of Activity": "Not specified in survey response; no direct Mayo Clinic, student, company, patient, or community quote is provided. Indirect evidence of positive external visibility includes Arizona Ascent magazine, HIMSSCast podcast coverage, Arizona Living coverage, and Health Care Accelerator recognition as a Prix Galien USA Awards nominee.",
+      "Systematic Process for Collecting Data": "Partially specified - the response tracks seed grant applications/funded projects, cohort size, company participation, countries represented, accreditation milestones, media visibility, and economic development outcomes. A formal evaluation or systematic data-collection protocol is not described."
     }
   ]
 }
